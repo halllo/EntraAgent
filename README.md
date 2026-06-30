@@ -4,7 +4,14 @@ Demonstrates Microsoft Entra Agent Identities — a blueprint app authenticates 
 
 ## One-time setup
 
-### 1. Create the agent user account
+### 1. Create the Agent Identity Blueprint and Agent Identity
+
+In the [Microsoft Entra admin center](https://entra.microsoft.com):
+
+1. Create the blueprint — go to Entra ID > Agents > Agent blueprints > New agent blueprint (Preview). On the blueprint's detail page add a client secret.
+2. Create the agent identity — go to Entra ID > Agents > Agent identities > New agent identity (Preview). Select the blueprint from step 1 under Agent blueprint.
+
+### 2. Create the agent user account
 
 ```powershell
 Install-Module Microsoft.Graph -Scope CurrentUser -Force
@@ -22,7 +29,7 @@ $result = Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/b
 $result.id  # save as AgentUserId
 ```
 
-### 2. Grant delegated Graph consent to the agent user
+### 3. Grant delegated Graph consent to the agent user
 
 ```powershell
 Connect-MgGraph -Scopes "DelegatedPermissionGrant.ReadWrite.All","Application.Read.All" -TenantId {tenantId}
@@ -35,11 +42,15 @@ New-MgOauth2PermissionGrant -BodyParameter @{
     consentType = "Principal"
     principalId = "{agentUserId}"
     resourceId  = $graphSp.Id
-    scope       = "Chat.Read Team.ReadBasic.All ChatMessage.Send ChannelMessage.Send"
+    scope       = "User.Read Chat.Read Team.ReadBasic.All ChatMessage.Send ChannelMessage.Send"
 }
 ```
 
-### 3. Configure appsettings.local.json
+### 4. Assign a Teams license to the agent user
+
+Teams Graph endpoints (`/me/chats`, `/me/joinedTeams`) require the agent user to hold a valid Teams/Microsoft 365 license, or they fail with "Failed to get license information for the user.".
+
+### 5. Configure appsettings.local.json
 
 | Key | Description |
 | --- | ----------- |
@@ -47,7 +58,6 @@ New-MgOauth2PermissionGrant -BodyParameter @{
 | `AzureAd:ClientId` | Blueprint app registration client ID |
 | `AzureAd:ClientCredentials[0]:ClientSecret` | Blueprint client secret |
 | `AgentIdentityId` | Agent identity service principal object ID |
-| `TenantDomain` | e.g. `contoso.onmicrosoft.com` |
 | `AgentUserId` | Agent user account object ID (from step 2) |
 
 ## Run
@@ -56,4 +66,4 @@ New-MgOauth2PermissionGrant -BodyParameter @{
 dotnet run ./Agent.cs
 ```
 
-Calls `GET /me/chats` (filtered to group chats) and `GET /me/joinedTeams` delegated as the agent user, and prints the results.
+Prints the agent user's profile (`GET /me`), then calls `GET /me/chats` (filtered to group chats) and `GET /me/joinedTeams` delegated as the agent user, and prints the results.

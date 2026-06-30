@@ -70,6 +70,16 @@ public class AgentHostedService([FromKeyedServices("ex1")] GraphServiceClient gr
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Print details about the account the agent is currently acting on behalf of.
+        var me = await graphClient.Me.GetAsync(cancellationToken: stoppingToken);
+        Console.WriteLine("Signed in as:");
+        Console.WriteLine($"- Display name:    {me?.DisplayName ?? "(unknown)"}");
+        Console.WriteLine($"- User principal:  {me?.UserPrincipalName ?? "(unknown)"}");
+        Console.WriteLine($"- Mail:            {me?.Mail ?? "(none)"}");
+        Console.WriteLine($"- Job title:       {me?.JobTitle ?? "(none)"}");
+        Console.WriteLine($"- Object id:       {me?.Id ?? "(unknown)"}");
+        Console.WriteLine();
+
         // List all group chats the user is part of (chatType 'group', excludes 1:1 and meeting chats).
         var groupChats = await graphClient.Me.Chats.GetAsync(requestConfig =>
         {
