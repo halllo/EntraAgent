@@ -1,6 +1,7 @@
 #:package Microsoft.Identity.Web@4.11.0
-#:package Microsoft.Identity.Web.GraphServiceClient@4.11.0
 #:package Microsoft.Identity.Web.AgentIdentities@4.11.0
+#:package Microsoft.Identity.Web.GraphServiceClient@4.11.0
+#:package Microsoft.Extensions.Configuration.UserSecrets@10.0.9
 #:package Microsoft.Extensions.Hosting@10.0.9
 
 using System.Security.Claims;
@@ -18,7 +19,8 @@ var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
     {
         config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-        config.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
+        config.AddJsonFile("appsettings.local.json", optional: false, reloadOnChange: true);
+        config.AddUserSecrets("Agent-dc989f5e0c3e979d1dacbcc4ad52364c3ec39878e669c6a02ca8694f37c2cbbf");
     })
     .ConfigureServices((context, services) =>
     {
@@ -64,16 +66,27 @@ public class AgentIdentityAccessTokenProvider(IAuthorizationHeaderProvider authP
     }
 }
 
-public class AgentHostedService([FromKeyedServices("ex1")] GraphServiceClient graphClient, IHostApplicationLifetime lifetime) : BackgroundService
+public class AgentHostedService([FromKeyedServices("ex1")] GraphServiceClient graphClient, IHostApplicationLifetime lifetime, IConfiguration config) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var users = await graphClient.Users.GetAsync();
-
-        Console.WriteLine($"Found {users?.Value?.Count ?? 0} user(s) in the tenant.");
-        foreach (var user in users?.Value ?? [])
+        // List all group chats the user is part of (chatType 'group', excludes 1:1 and meeting chats).
+        var groupChats = await graphClient.Me.Chats.GetAsync(requestConfig =>
         {
-            Console.WriteLine($"- {user.DisplayName} ({user.UserPrincipalName})");
+            requestConfig.QueryParameters.Filter = "chatType eq 'group'";
+        }, stoppingToken);
+        Console.WriteLine($"Found {groupChats?.Value?.Count ?? 0} group chat(s).");
+        foreach (var chat in groupChats?.Value ?? [])
+        {
+            Console.WriteLine($"- {chat.Topic ?? "(no topic)"} [{chat.Id}]");
+        }
+
+        // List all teams the user has joined.
+        var teams = await graphClient.Me.JoinedTeams.GetAsync(cancellationToken: stoppingToken);
+        Console.WriteLine($"Found {teams?.Value?.Count ?? 0} team(s).");
+        foreach (var team in teams?.Value ?? [])
+        {
+            Console.WriteLine($"- {team.DisplayName} [{team.Id}]");
         }
 
         lifetime.StopApplication();

@@ -22,7 +22,7 @@ $result = Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/b
 $result.id  # save as AgentUserId
 ```
 
-### 2. Grant delegated User.Read.All consent to the agent user
+### 2. Grant delegated Graph consent to the agent user
 
 ```powershell
 Connect-MgGraph -Scopes "DelegatedPermissionGrant.ReadWrite.All","Application.Read.All" -TenantId {tenantId}
@@ -35,7 +35,7 @@ New-MgOauth2PermissionGrant -BodyParameter @{
     consentType = "Principal"
     principalId = "{agentUserId}"
     resourceId  = $graphSp.Id
-    scope       = "User.Read.All"
+    scope       = "Chat.Read Team.ReadBasic.All ChatMessage.Send ChannelMessage.Send"
 }
 ```
 
@@ -56,4 +56,4 @@ New-MgOauth2PermissionGrant -BodyParameter @{
 dotnet run ./Agent.cs
 ```
 
-Calls `GET /users` delegated as the agent user and prints the results.
+Calls `GET /me/chats` (filtered to group chats) and `GET /me/joinedTeams` delegated as the agent user, and prints the results.
