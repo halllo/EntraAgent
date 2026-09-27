@@ -34,15 +34,24 @@ $result.id  # save as AgentUserId
 ```powershell
 Connect-MgGraph -Scopes "DelegatedPermissionGrant.ReadWrite.All","Application.Read.All" -TenantId {tenantId}
 
-$graphSp = Get-MgServicePrincipal -Filter "appId eq '00000003-0000-0000-c000-000000000000'"
 $agentSp  = Get-MgServicePrincipal -Filter "id eq '{agentIdentityId}'"
+$graphSp = Get-MgServicePrincipal -Filter "appId eq '00000003-0000-0000-c000-000000000000'"
+$devOpsSp = Get-MgServicePrincipal -Filter "appId eq '499b84ac-1321-427f-aa17-267ca6975798'"
 
 New-MgOauth2PermissionGrant -BodyParameter @{
     clientId    = $agentSp.Id
     consentType = "Principal"
     principalId = "{agentUserId}"
     resourceId  = $graphSp.Id
-    scope       = "User.Read Chat.Read Team.ReadBasic.All ChatMessage.Send ChannelMessage.Send"
+    scope       = "User.Read Chat.Read Team.ReadBasic.All ChatMessage.Send ChannelMessage.Send Channel.ReadBasic.All ChannelMember.Read.All"
+}
+
+New-MgOauth2PermissionGrant -BodyParameter @{
+    clientId    = $agentSp.Id
+    consentType = "Principal"
+    principalId = "{agentUserId}"
+    resourceId  = $devOpsSp.Id
+    scope       = "user_impersonation"
 }
 ```
 
